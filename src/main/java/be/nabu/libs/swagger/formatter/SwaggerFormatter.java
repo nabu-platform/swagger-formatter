@@ -37,6 +37,7 @@ import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.map.MapContent;
 import be.nabu.libs.types.map.MapContentWrapper;
 import be.nabu.libs.types.map.MapType;
+import be.nabu.libs.types.properties.CommentProperty;
 import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.types.properties.FormatProperty;
 import be.nabu.libs.types.properties.MaxExclusiveProperty;
@@ -508,6 +509,11 @@ public class SwaggerFormatter {
 		Object enumeration = ValueUtils.getValue(new EnumerationProperty(), properties);
 		if (enumeration != null) {
 			content.put("enum", enumeration);
+		}
+		
+		String comment = ValueUtils.getValue(CommentProperty.getInstance(), properties);
+		if (comment != null) {
+			content.put("description", comment);
 		}
 		
 		if (type instanceof SimpleType) {
