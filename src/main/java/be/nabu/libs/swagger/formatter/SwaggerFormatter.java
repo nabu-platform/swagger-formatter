@@ -2,6 +2,7 @@ package be.nabu.libs.swagger.formatter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -526,6 +527,10 @@ public class SwaggerFormatter {
 			else if (byte[].class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.STRING;
 				subType = ParameterSubType.BYTE;
+			}
+			else if (InputStream.class.isAssignableFrom(instanceClass)) {
+				mainType = ParameterType.STRING;
+				subType = ParameterSubType.BINARY;
 			}
 			else if (Date.class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.STRING;
