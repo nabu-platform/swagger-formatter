@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -380,10 +381,23 @@ public class SwaggerFormatter {
 				Map<String, Object> properties = new LinkedHashMap<String, Object>();
 				for (Element<?> child : expandInline ? TypeUtils.getAllChildren((ComplexType) type) : (ComplexType) type) {
 					Value<Integer> property = child.getProperty(MinOccursProperty.getInstance());
-					if (property == null || property.getValue() != 0) {
-						required.add(child.getName());
+					String name = child.getName();
+					boolean isAttribute = false;
+					if (name.startsWith("@")) {
+						name = name.substring(1);
+						isAttribute = true;
 					}
-					properties.put(child.getName(), formatElement(definition, child, true, false));
+					if (property == null || property.getValue() != 0) {
+						required.add(name);
+					}
+					Map<String, Object> childProperties = formatElement(definition, child, true, false);
+					properties.put(name, childProperties);
+					if (isAttribute) {
+						Map<String, Object> xml = new HashMap<String, Object>();
+						xml.put("attribute", true);
+						xml.put("name", name);
+						childProperties.put("xml", xml);
+					}
 				}
 				if (required.isEmpty()) {
 					targetMap.remove("required");
@@ -436,10 +450,23 @@ public class SwaggerFormatter {
 					Map<String, Object> properties = new LinkedHashMap<String, Object>();
 					for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
 						Value<Integer> property = child.getProperty(MinOccursProperty.getInstance());
-						if (property == null || property.getValue() != 0) {
-							required.add(child.getName());
+						String name = child.getName();
+						boolean isAttribute = false;
+						if (name.startsWith("@")) {
+							name = name.substring(1);
+							isAttribute = true;
 						}
-						properties.put(child.getName(), formatElement(definition, child, true, false));
+						if (property == null || property.getValue() != 0) {
+							required.add(name);
+						}
+						Map<String, Object> childProperties = formatElement(definition, child, true, false);
+						properties.put(name, childProperties);
+						if (isAttribute) {
+							Map<String, Object> xml = new HashMap<String, Object>();
+							xml.put("attribute", true);
+							xml.put("name", name);
+							childProperties.put("xml", xml);
+						}
 					}
 					if (required.isEmpty()) {
 						content.remove("required");
@@ -463,7 +490,19 @@ public class SwaggerFormatter {
 			if (required) {
 				content.put("required", required);
 			}
-			content.put("name", ValueUtils.getValue(NameProperty.getInstance(), properties));
+			String name = ValueUtils.getValue(NameProperty.getInstance(), properties);
+			if (name != null) {
+				if (name.startsWith("@")) {
+					content.put("name", name.substring(1));
+					Map<String, Object> xml = new HashMap<String, Object>();
+					xml.put("attribute", true);
+					xml.put("name", name.substring(1));
+					content.put("xml", xml);
+				}
+				else {
+					content.put("name", name);
+				}
+			}
 		}
 		
 		Object maxExclusive = ValueUtils.getValue(new MaxExclusiveProperty(), properties);
