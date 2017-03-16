@@ -4,6 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Date;
@@ -11,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.property.ValueUtils;
@@ -58,6 +62,7 @@ public class SwaggerFormatter {
 	private boolean expandInline;
 	private boolean allowDefinedTypeReferences;
 	private List<DefinedType> referencedTypes;
+	private boolean allowCustomFormats = true;
 	
 //	public static void main(String...args) throws IOException {
 //		URL url = new URL("https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/petstore.json");
@@ -607,6 +612,20 @@ public class SwaggerFormatter {
 			if (subType != null) {
 				content.put("format", subType.toString());
 			}
+			else if (allowCustomFormats) {
+				if (URI.class.isAssignableFrom(instanceClass)) {
+					content.put("format", "uri");
+				}
+				else if (UUID.class.isAssignableFrom(instanceClass)) {
+					content.put("format", "uuid");
+				}
+				else if (BigDecimal.class.isAssignableFrom(instanceClass)) {
+					content.put("format", "bigDecimal");
+				}
+				else if (BigInteger.class.isAssignableFrom(instanceClass)) {
+					content.put("format", "bigInteger");
+				}
+			}
 		}
 		else {
 			content.put("type", "object");
@@ -627,6 +646,14 @@ public class SwaggerFormatter {
 
 	public void setAllowDefinedTypeReferences(boolean allowDefinedTypeReferences) {
 		this.allowDefinedTypeReferences = allowDefinedTypeReferences;
+	}
+
+	public boolean isAllowCustomFormats() {
+		return allowCustomFormats;
+	}
+
+	public void setAllowCustomFormats(boolean allowCustomFormats) {
+		this.allowCustomFormats = allowCustomFormats;
 	}
 	
 }
