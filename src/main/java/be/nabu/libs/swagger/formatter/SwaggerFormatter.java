@@ -164,11 +164,11 @@ public class SwaggerFormatter {
 		if (definition.getRegistry() != null) {
 			Map<String, Object> elements = new LinkedHashMap<String, Object>();
 			for (ComplexType complexType : definition.getRegistry().getComplexTypes(definition.getId())) {
-				Map<String, Object> elementMap = formatDefinedType(definition, complexType);
+				Map<String, Object> elementMap = formatDefinedType(definition, complexType, true);
 				elements.put(complexType.getName(), elementMap);
 			}
 			for (SimpleType<?> simpleType : definition.getRegistry().getSimpleTypes(definition.getId())) {
-				Map<String, Object> elementMap = formatDefinedType(definition, simpleType);
+				Map<String, Object> elementMap = formatDefinedType(definition, simpleType, true);
 				elements.put(simpleType.getName(), elementMap);
 			}
 			map.put("definitions", elements);
@@ -186,7 +186,7 @@ public class SwaggerFormatter {
 			for (DefinedType referencedType : currentBatch) {
 				// it is not defined yet
 				if (!definitions.containsKey(referencedType.getId())) {
-					definitions.put(referencedType.getId(), formatDefinedType(definition, referencedType));
+					definitions.put(referencedType.getId(), formatDefinedType(definition, referencedType, true));
 				}
 			}
 		}
@@ -323,7 +323,7 @@ public class SwaggerFormatter {
 	}
 	
 	public static String formatTypeAsJSON(Type type) {
-		Map<String, Object> map = new SwaggerFormatter().formatDefinedType(null, type);
+		Map<String, Object> map = new SwaggerFormatter().formatDefinedType(null, type, true);
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		MapType content = MapContentWrapper.buildFromContent(map);
 		JSONBinding binding = new JSONBinding(content);
@@ -338,12 +338,13 @@ public class SwaggerFormatter {
 		return new String(output.toByteArray(), Charset.forName("UTF-8"));
 	}
 	
-	private Map<String, Object> formatDefinedType(SwaggerDefinition definition, Type type) {
+	private Map<String, Object> formatDefinedType(SwaggerDefinition definition, Type type, boolean isRoot) {
 		Map<String, Object> content = new LinkedHashMap<String, Object>();
 		Integer minOccurs = ValueUtils.getValue(MinOccursProperty.getInstance(), type.getProperties());
 		Integer maxOccurs = ValueUtils.getValue(MaxOccursProperty.getInstance(), type.getProperties());
 		// we have an array, this is represented by a type that extends another type
-		if (maxOccurs != null && maxOccurs != 1) {
+		// we don't put arrays on the root? could be too broad an assumption... (@03-04-2017)
+		if (!isRoot && maxOccurs != null && maxOccurs != 1) {
 			Type superType = type.getSuperType();
 			content.put("type", "array");
 			if (maxOccurs != 0) {
@@ -352,7 +353,7 @@ public class SwaggerFormatter {
 			content.put("minItems", minOccurs == null ? 1 : minOccurs);
 			// if it is a not a type that is defined in this definition, unfold it internally
 			if (definition == null || !definition.getId().equals(superType.getNamespace())) {
-				content.put("items", formatDefinedType(definition, superType));
+				content.put("items", formatDefinedType(definition, superType, false));
 			}
 			else {
 				Map<String, Object> items = new LinkedHashMap<String, Object>();
