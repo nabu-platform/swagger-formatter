@@ -154,6 +154,14 @@ public class SwaggerFormatter {
 								method.put("security", securities);
 							}
 						}
+						
+						// set extensions
+						if (swaggerMethod.getExtensions() != null) {
+							for (String key : swaggerMethod.getExtensions().keySet()) {
+								method.put("x-" + key, swaggerMethod.getExtensions().get(key));
+							}
+						}
+						
 						methods.put(swaggerMethod.getMethod(), method);
 					}
 				}
