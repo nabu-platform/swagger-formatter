@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import be.nabu.libs.converter.ConverterFactory;
+import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.swagger.api.SwaggerDefinition;
@@ -325,7 +326,7 @@ public class SwaggerFormatter {
 		content.put("uniqueItems", parameter.getUnique());
 		content.put("multipleOf", parameter.getMultipleOf());
 		if (parameter.getCollectionFormat() != null) {
-			content.put("collectionFormat", parameter.getCollectionFormat().toString());
+			content.put("collectionFormat", parameter.getCollectionFormat().toString().toLowerCase());
 		}
 		return content;
 	}
@@ -519,29 +520,40 @@ public class SwaggerFormatter {
 			}
 		}
 		
+		Converter converter = ConverterFactory.getInstance().getConverter();
 		Object maxExclusive = ValueUtils.getValue(new MaxExclusiveProperty(), properties);
+		
+		// the min/max inclusive/exclusive can have broader meanings (e.g. Date) which can not be represented in swagger so don't try
 		if (maxExclusive != null) {
-			content.put("maximum", ConverterFactory.getInstance().getConverter().convert(maxExclusive, Double.class));
-			content.put("exclusiveMaximum", true);
+			if (converter.canConvert(maxExclusive.getClass(), Double.class)) {
+				content.put("maximum", converter.convert(maxExclusive, Double.class));
+				content.put("exclusiveMaximum", true);
+			}
 		}
 		else {
 			Object maxInclusive = ValueUtils.getValue(new MaxInclusiveProperty(), properties);
 			if (maxInclusive != null) {
-				content.put("maximum", ConverterFactory.getInstance().getConverter().convert(maxInclusive, Double.class));
-				content.put("exclusiveMaximum", false);
+				if (converter.canConvert(maxInclusive.getClass(), Double.class)) {
+					content.put("maximum", converter.convert(maxInclusive, Double.class));
+					content.put("exclusiveMaximum", false);
+				}
 			}
 		}
 		
 		Object minExclusive = ValueUtils.getValue(new MinExclusiveProperty(), properties);
 		if (minExclusive != null) {
-			content.put("minimum", ConverterFactory.getInstance().getConverter().convert(minExclusive, Double.class));
-			content.put("exclusiveMinimum", true);
+			if (converter.canConvert(minExclusive.getClass(), Double.class)) {
+				content.put("minimum", converter.convert(minExclusive, Double.class));
+				content.put("exclusiveMinimum", true);
+			}
 		}
 		else {
 			Object minInclusive = ValueUtils.getValue(new MinInclusiveProperty(), properties);
 			if (minInclusive != null) {
-				content.put("minimum", ConverterFactory.getInstance().getConverter().convert(minInclusive, Double.class));
-				content.put("exclusiveMinimum", false);
+				if (converter.canConvert(minInclusive.getClass(), Double.class)) {
+					content.put("minimum", converter.convert(minInclusive, Double.class));
+					content.put("exclusiveMinimum", false);
+				}
 			}
 		}
 		
