@@ -182,6 +182,18 @@ public class SwaggerFormatter {
 			}
 			map.put("definitions", elements);
 		}
+		
+		if (definition.getGlobalSecurity() != null) {
+			List<Object> securities = new ArrayList<Object>();
+			for (SwaggerSecuritySetting securitySetting : definition.getGlobalSecurity()) {
+				Map<String, Object> security = new LinkedHashMap<String, Object>();
+				security.put(securitySetting.getName(), securitySetting.getScopes() == null ? new ArrayList<String>() : securitySetting.getScopes());
+				securities.add(security);
+			}
+			if (!securities.isEmpty()) {
+				map.put("security", securities);
+			}
+		}
 
 		// this is a recursive operation as writing out the types can introduce new dependencies to other types
 		while (!referencedTypes.isEmpty()) {
