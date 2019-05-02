@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
@@ -64,6 +67,7 @@ public class SwaggerFormatter {
 	private boolean allowDefinedTypeReferences;
 	private List<DefinedType> referencedTypes;
 	private boolean allowCustomFormats = true;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 //	public static void main(String...args) throws IOException {
 //		URL url = new URL("https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/petstore.json");
@@ -98,73 +102,79 @@ public class SwaggerFormatter {
 			Map<String, Object> pathMap = new LinkedHashMap<String, Object>();
 			for (SwaggerPath path : definition.getPaths()) {
 				Map<String, Object> methods = new LinkedHashMap<String, Object>();
-				if (path.getMethods() != null) {
-					for (SwaggerMethod swaggerMethod : path.getMethods()) {
-						Map<String, Object> method = new LinkedHashMap<String, Object>();
-						method.put("summary", swaggerMethod.getSummary());
-						method.put("description", swaggerMethod.getDescription());
-						method.put("operationId", swaggerMethod.getOperationId());
-						method.put("consumes", swaggerMethod.getConsumes());
-						method.put("produces", swaggerMethod.getProduces());
-						method.put("deprecated", swaggerMethod.getDeprecated());
-						method.put("tags", swaggerMethod.getTags());
-						if (swaggerMethod.getDocumentation() != null) {
-							method.put("externalDocs", new BeanInstance<SwaggerDocumentation>(swaggerMethod.getDocumentation()));
-						}
-						
-						if (swaggerMethod.getParameters() != null) {
-							List<Object> parameters = new ArrayList<Object>();
-							for (SwaggerParameter parameter : swaggerMethod.getParameters()) {
-								parameters.add(formatParameter(definition, parameter));
+				try {
+					if (path.getMethods() != null) {
+						for (SwaggerMethod swaggerMethod : path.getMethods()) {
+							Map<String, Object> method = new LinkedHashMap<String, Object>();
+							method.put("summary", swaggerMethod.getSummary());
+							method.put("description", swaggerMethod.getDescription());
+							method.put("operationId", swaggerMethod.getOperationId());
+							method.put("consumes", swaggerMethod.getConsumes());
+							method.put("produces", swaggerMethod.getProduces());
+							method.put("deprecated", swaggerMethod.getDeprecated());
+							method.put("tags", swaggerMethod.getTags());
+							if (swaggerMethod.getDocumentation() != null) {
+								method.put("externalDocs", new BeanInstance<SwaggerDocumentation>(swaggerMethod.getDocumentation()));
 							}
-							method.put("parameters", parameters);
-						}
-						method.put("schemes", swaggerMethod.getSchemes());
-
-						if (swaggerMethod.getResponses() != null) {
-							Map<String, Object> allResponses = new LinkedHashMap<String, Object>();
-							for (SwaggerResponse response : swaggerMethod.getResponses()) {
-								String code = response.getCode() == null ? "default" : response.getCode().toString();
-								Map<String, Object> responseContent = new LinkedHashMap<String, Object>();
-								responseContent.put("description", response.getDescription());
-								if (response.getHeaders() != null) {
-									Map<String, Object> headerContent = new LinkedHashMap<String, Object>();
-									for (SwaggerParameter header : response.getHeaders()) {
-										Map<String, Object> formatParameter = formatParameter(definition, header);
-										formatParameter.remove("name");
-										headerContent.put(header.getName(), formatParameter);
+							
+							if (swaggerMethod.getParameters() != null) {
+								List<Object> parameters = new ArrayList<Object>();
+								for (SwaggerParameter parameter : swaggerMethod.getParameters()) {
+									parameters.add(formatParameter(definition, parameter));
+								}
+								method.put("parameters", parameters);
+							}
+							method.put("schemes", swaggerMethod.getSchemes());
+	
+							if (swaggerMethod.getResponses() != null) {
+								Map<String, Object> allResponses = new LinkedHashMap<String, Object>();
+								for (SwaggerResponse response : swaggerMethod.getResponses()) {
+									String code = response.getCode() == null ? "default" : response.getCode().toString();
+									Map<String, Object> responseContent = new LinkedHashMap<String, Object>();
+									responseContent.put("description", response.getDescription());
+									if (response.getHeaders() != null) {
+										Map<String, Object> headerContent = new LinkedHashMap<String, Object>();
+										for (SwaggerParameter header : response.getHeaders()) {
+											Map<String, Object> formatParameter = formatParameter(definition, header);
+											formatParameter.remove("name");
+											headerContent.put(header.getName(), formatParameter);
+										}
+										responseContent.put("headers", headerContent);
 									}
-									responseContent.put("headers", headerContent);
+									if (response.getElement() != null) {
+										responseContent.put("schema", formatResponseSchema(definition, response));
+									}
+									allResponses.put(code, responseContent);
 								}
-								if (response.getElement() != null) {
-									responseContent.put("schema", formatResponseSchema(definition, response));
+								method.put("responses", allResponses);
+							}
+							
+							if (swaggerMethod.getSecurity() != null) {
+								List<Object> securities = new ArrayList<Object>();
+								for (SwaggerSecuritySetting securitySetting : swaggerMethod.getSecurity()) {
+									Map<String, Object> security = new LinkedHashMap<String, Object>();
+									security.put(securitySetting.getName(), securitySetting.getScopes() == null ? new ArrayList<String>() : securitySetting.getScopes());
+									securities.add(security);
 								}
-								allResponses.put(code, responseContent);
+								if (!securities.isEmpty()) {
+									method.put("security", securities);
+								}
 							}
-							method.put("responses", allResponses);
+							
+							// set extensions
+							if (swaggerMethod.getExtensions() != null) {
+								for (String key : swaggerMethod.getExtensions().keySet()) {
+									method.put("x-" + key, swaggerMethod.getExtensions().get(key));
+								}
+							}
+							
+							methods.put(swaggerMethod.getMethod(), method);
 						}
-						
-						if (swaggerMethod.getSecurity() != null) {
-							List<Object> securities = new ArrayList<Object>();
-							for (SwaggerSecuritySetting securitySetting : swaggerMethod.getSecurity()) {
-								Map<String, Object> security = new LinkedHashMap<String, Object>();
-								security.put(securitySetting.getName(), securitySetting.getScopes() == null ? new ArrayList<String>() : securitySetting.getScopes());
-								securities.add(security);
-							}
-							if (!securities.isEmpty()) {
-								method.put("security", securities);
-							}
-						}
-						
-						// set extensions
-						if (swaggerMethod.getExtensions() != null) {
-							for (String key : swaggerMethod.getExtensions().keySet()) {
-								method.put("x-" + key, swaggerMethod.getExtensions().get(key));
-							}
-						}
-						
-						methods.put(swaggerMethod.getMethod(), method);
 					}
+				}
+				catch (Exception e) {
+					logger.error("Could not format operation: " + path.getPath(), e);
+					throw new RuntimeException(e);
 				}
 				pathMap.put(path.getPath(), methods);
 				map.put("paths", pathMap);
@@ -173,12 +183,24 @@ public class SwaggerFormatter {
 		if (definition.getRegistry() != null) {
 			Map<String, Object> elements = new LinkedHashMap<String, Object>();
 			for (ComplexType complexType : definition.getRegistry().getComplexTypes(definition.getId())) {
-				Map<String, Object> elementMap = formatDefinedType(definition, complexType, true);
-				elements.put(complexType.getName(), elementMap);
+				try {
+					Map<String, Object> elementMap = formatDefinedType(definition, complexType, true);
+					elements.put(complexType.getName(), elementMap);
+				}
+				catch (Exception e) {
+					logger.error("Could not format complex type: " + complexType.getName(), e);
+					throw new RuntimeException(e);
+				}
 			}
 			for (SimpleType<?> simpleType : definition.getRegistry().getSimpleTypes(definition.getId())) {
-				Map<String, Object> elementMap = formatDefinedType(definition, simpleType, true);
-				elements.put(simpleType.getName(), elementMap);
+				try {
+					Map<String, Object> elementMap = formatDefinedType(definition, simpleType, true);
+					elements.put(simpleType.getName(), elementMap);
+				}
+				catch (Exception e) {
+					logger.error("Could not format simple type: " + simpleType.getName(), e);
+					throw new RuntimeException(e);
+				}
 			}
 			map.put("definitions", elements);
 		}
