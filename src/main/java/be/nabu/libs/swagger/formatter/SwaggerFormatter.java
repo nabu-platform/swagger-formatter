@@ -101,7 +101,11 @@ public class SwaggerFormatter {
 		if (definition.getPaths() != null) {
 			Map<String, Object> pathMap = new LinkedHashMap<String, Object>();
 			for (SwaggerPath path : definition.getPaths()) {
-				Map<String, Object> methods = new LinkedHashMap<String, Object>();
+				// if you have multiple path objects linking to the same actual path on the web application, merge them 
+				Map<String, Object> methods = (Map<String, Object>) pathMap.get(path.getPath());
+				if (methods == null) {
+					methods = new LinkedHashMap<String, Object>();
+				}
 				try {
 					if (path.getMethods() != null) {
 						for (SwaggerMethod swaggerMethod : path.getMethods()) {
