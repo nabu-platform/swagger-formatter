@@ -50,6 +50,7 @@ import be.nabu.libs.types.map.MapType;
 import be.nabu.libs.types.properties.CommentProperty;
 import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.types.properties.FormatProperty;
+import be.nabu.libs.types.properties.LengthProperty;
 import be.nabu.libs.types.properties.MaxExclusiveProperty;
 import be.nabu.libs.types.properties.MaxInclusiveProperty;
 import be.nabu.libs.types.properties.MaxLengthProperty;
@@ -603,6 +604,13 @@ public class SwaggerFormatter {
 		Integer minLength = ValueUtils.getValue(MinLengthProperty.getInstance(), properties);
 		if (minLength != null) {
 			content.put("minLength", minLength);
+		}
+		
+		// there is no support in swagger for exact length
+		Integer exactLength = ValueUtils.getValue(LengthProperty.getInstance(), properties);
+		if (exactLength != null) {
+			content.put("minLength", exactLength);
+			content.put("maxLength", exactLength);
 		}
 		
 		String pattern = ValueUtils.getValue(PatternProperty.getInstance(), properties);
