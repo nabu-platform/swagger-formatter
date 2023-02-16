@@ -61,6 +61,8 @@ import be.nabu.libs.types.properties.MinLengthProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.properties.PatternProperty;
+import be.nabu.libs.types.utils.DateUtils;
+import be.nabu.libs.types.utils.DateUtils.Granularity;
 
 public class SwaggerFormatter {
 	
@@ -142,6 +144,8 @@ public class SwaggerFormatter {
 										for (SwaggerParameter header : response.getHeaders()) {
 											Map<String, Object> formatParameter = formatParameter(definition, header);
 											formatParameter.remove("name");
+											// should not put the "required" attribute in headers (at least in response), this is not allowed according to the spec
+											formatParameter.remove("required");
 											headerContent.put(header.getName(), formatParameter);
 										}
 										responseContent.put("headers", headerContent);
@@ -631,6 +635,7 @@ public class SwaggerFormatter {
 		if (type instanceof SimpleType) {
 			ParameterType mainType = null;
 			ParameterSubType subType = null;
+			String customFormat = null;
 			Class<?> instanceClass = ((SimpleType<?>) type).getInstanceClass();
 			if (Boolean.class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.BOOLEAN;
@@ -646,8 +651,24 @@ public class SwaggerFormatter {
 			else if (Date.class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.STRING;
 				String format = ValueUtils.getValue(FormatProperty.getInstance(), properties);
-				if (format != null && format.equals("date")) {
-					subType = ParameterSubType.DATE;
+				if (format != null) {
+					Granularity granularity = DateUtils.getGranularity(format);
+					switch (granularity) {
+						case DATE:
+							subType = ParameterSubType.DATE;
+						break;
+						case TIMESTAMP:
+							subType = ParameterSubType.DATE_TIME;
+						break;
+						case TIME:
+							if (allowCustomFormats) {
+								customFormat = "time";
+							}
+							else {
+								subType = ParameterSubType.DATE_TIME;	
+							}
+						break;
+					}
 				}
 				else {
 					subType = ParameterSubType.DATE_TIME;
@@ -691,6 +712,9 @@ public class SwaggerFormatter {
 				}
 				else if (BigInteger.class.isAssignableFrom(instanceClass)) {
 					content.put("format", "bigInteger");
+				}
+				else if (customFormat != null) {
+					content.put("format", customFormat);
 				}
 			}
 		}
