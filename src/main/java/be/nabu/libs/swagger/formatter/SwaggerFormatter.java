@@ -48,6 +48,7 @@ import be.nabu.libs.types.map.MapContent;
 import be.nabu.libs.types.map.MapContentWrapper;
 import be.nabu.libs.types.map.MapType;
 import be.nabu.libs.types.properties.CommentProperty;
+import be.nabu.libs.types.properties.DynamicNameProperty;
 import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.types.properties.FormatProperty;
 import be.nabu.libs.types.properties.LengthProperty;
@@ -437,6 +438,7 @@ public class SwaggerFormatter {
 				List<String> required = new ArrayList<String>();
 				targetMap.put("required", required);
 				Map<String, Object> properties = new LinkedHashMap<String, Object>();
+				Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 				for (Element<?> child : expandInline ? TypeUtils.getAllChildren((ComplexType) type) : (ComplexType) type) {
 					Value<Integer> property = child.getProperty(MinOccursProperty.getInstance());
 					String name = child.getName();
@@ -445,11 +447,27 @@ public class SwaggerFormatter {
 						name = name.substring(1);
 						isAttribute = true;
 					}
-					if (property == null || property.getValue() != 0) {
-						required.add(name);
-					}
 					Map<String, Object> childProperties = formatElement(definition, child, true, false);
-					properties.put(name, childProperties);
+					Value<String> dynamicName = child.getProperty(DynamicNameProperty.getInstance());
+					if (dynamicName != null && dynamicName.getValue() != null && child.getType().isList(child.getProperties()) && childProperties.get("items") != null) {
+						Map<String, Object> itemsMap = (Map<String, Object>) childProperties.get("items");
+						// remove the dynamic field itself, from both the required and the properties
+						List<String> itemsRequired = (List<String>) itemsMap.get("required");
+						if (itemsRequired != null) {
+							itemsRequired.remove(dynamicName.getValue());
+						}
+						Map<String, Object> itemsPropertiesMap = (Map<String, Object>) itemsMap.get("properties");
+						if (itemsPropertiesMap != null) {
+							itemsPropertiesMap.remove(dynamicName.getValue());
+						}
+						additionalProperties.putAll(itemsMap);
+					}
+					else {
+						properties.put(name, childProperties);
+						if (property == null || property.getValue() != 0) {
+							required.add(name);
+						}
+					}
 					if (isAttribute) {
 						Map<String, Object> xml = new HashMap<String, Object>();
 						xml.put("attribute", true);
@@ -462,6 +480,9 @@ public class SwaggerFormatter {
 				}
 				if (!properties.isEmpty()) {
 					targetMap.put("properties", properties);
+				}
+				if (!additionalProperties.isEmpty()) {
+					content.put("additionalProperties", additionalProperties);
 				}
 			}
 		}
@@ -506,6 +527,7 @@ public class SwaggerFormatter {
 					List<String> required = new ArrayList<String>();
 					content.put("required", required);
 					Map<String, Object> properties = new LinkedHashMap<String, Object>();
+					Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 					for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
 						Value<Integer> property = child.getProperty(MinOccursProperty.getInstance());
 						String name = child.getName();
@@ -514,11 +536,28 @@ public class SwaggerFormatter {
 							name = name.substring(1);
 							isAttribute = true;
 						}
-						if (property == null || property.getValue() != 0) {
-							required.add(name);
-						}
 						Map<String, Object> childProperties = formatElement(definition, child, true, false);
-						properties.put(name, childProperties);
+						Value<String> dynamicName = child.getProperty(DynamicNameProperty.getInstance());
+						// only supported if it is a list!
+						if (dynamicName != null && dynamicName.getValue() != null && child.getType().isList(child.getProperties()) && childProperties.get("items") != null) {
+							Map<String, Object> itemsMap = (Map<String, Object>) childProperties.get("items");
+							// remove the dynamic field itself, from both the required and the properties
+							List<String> itemsRequired = (List<String>) itemsMap.get("required");
+							if (itemsRequired != null) {
+								itemsRequired.remove(dynamicName.getValue());
+							}
+							Map<String, Object> itemsPropertiesMap = (Map<String, Object>) itemsMap.get("properties");
+							if (itemsPropertiesMap != null) {
+								itemsPropertiesMap.remove(dynamicName.getValue());
+							}
+							additionalProperties.putAll(itemsMap);
+						}
+						else {
+							properties.put(name, childProperties);
+							if (property == null || property.getValue() != 0) {
+								required.add(name);
+							}
+						}
 						if (isAttribute) {
 							Map<String, Object> xml = new HashMap<String, Object>();
 							xml.put("attribute", true);
@@ -531,6 +570,9 @@ public class SwaggerFormatter {
 					}
 					if (!properties.isEmpty()) {
 						content.put("properties", properties);
+					}
+					if (!additionalProperties.isEmpty()) {
+						content.put("additionalProperties", additionalProperties);
 					}
 				}
 			}
