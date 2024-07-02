@@ -724,6 +724,9 @@ public class SwaggerFormatter {
 				mainType = ParameterType.INTEGER;
 				subType = ParameterSubType.INT64;
 			}
+			else if (BigInteger.class.isAssignableFrom(instanceClass)) {
+				mainType = ParameterType.INTEGER;
+			}
 			else if (Float.class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.NUMBER;
 				subType = ParameterSubType.FLOAT;
@@ -731,6 +734,9 @@ public class SwaggerFormatter {
 			else if (Double.class.isAssignableFrom(instanceClass)) {
 				mainType = ParameterType.NUMBER;
 				subType = ParameterSubType.DOUBLE;
+			}
+			else if (BigDecimal.class.isAssignableFrom(instanceClass)) {
+				mainType = ParameterType.NUMBER;
 			}
 			else if (String.class.isAssignableFrom(instanceClass) || type instanceof Marshallable) {
 				mainType = ParameterType.STRING;
