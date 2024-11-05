@@ -35,6 +35,7 @@ import be.nabu.libs.swagger.api.SwaggerPath;
 import be.nabu.libs.swagger.api.SwaggerResponse;
 import be.nabu.libs.swagger.api.SwaggerSecurityDefinition;
 import be.nabu.libs.swagger.api.SwaggerSecuritySetting;
+import be.nabu.libs.swagger.api.SwaggerTag;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
@@ -72,6 +73,7 @@ public class SwaggerFormatter {
 	private List<DefinedType> referencedTypes;
 	private boolean allowCustomFormats = true;
 	private Logger logger = LoggerFactory.getLogger(getClass());
+	private boolean includeDocumentation = true;
 	
 //	public static void main(String...args) throws IOException {
 //		URL url = new URL("https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/petstore.json");
@@ -92,7 +94,7 @@ public class SwaggerFormatter {
 	public void format(SwaggerDefinition definition, OutputStream output) throws IOException {
 		Map<String, Object> map = new LinkedHashMap<String, Object>();
 		map.put("swagger", definition.getVersion());
-		if (definition.getInfo() != null) {
+		if (definition.getInfo() != null && includeDocumentation) {
 			map.put("info", new BeanInstance<SwaggerInfo>(definition.getInfo()));
 		}
 		map.put("host", definition.getHost());
@@ -100,6 +102,20 @@ public class SwaggerFormatter {
 		map.put("schemes", definition.getSchemes());
 		map.put("consumes", definition.getConsumes());
 		map.put("produces", definition.getProduces());
+		
+		if (includeDocumentation) {
+			List<SwaggerTag> globalTags = definition.getTags();
+			if (globalTags != null && !globalTags.isEmpty()) {
+				List<Object> tagList = new ArrayList<Object>();
+				for (SwaggerTag globalTag : globalTags) {
+					Map<String, Object> singleTagMap = new LinkedHashMap<String, Object>();
+					singleTagMap.put("name", globalTag.getName());
+					singleTagMap.put("description", globalTag.getDescription());
+					tagList.add(singleTagMap);
+				}
+				map.put("tags", tagList);
+			}
+		}
 		
 		referencedTypes = new ArrayList<DefinedType>();
 		if (definition.getPaths() != null) {
@@ -114,14 +130,16 @@ public class SwaggerFormatter {
 					if (path.getMethods() != null) {
 						for (SwaggerMethod swaggerMethod : path.getMethods()) {
 							Map<String, Object> method = new LinkedHashMap<String, Object>();
-							method.put("summary", swaggerMethod.getSummary());
-							method.put("description", swaggerMethod.getDescription());
+							if (includeDocumentation) {
+								method.put("summary", swaggerMethod.getSummary());
+								method.put("description", swaggerMethod.getDescription());
+							}
 							method.put("operationId", swaggerMethod.getOperationId());
 							method.put("consumes", swaggerMethod.getConsumes());
 							method.put("produces", swaggerMethod.getProduces());
 							method.put("deprecated", swaggerMethod.getDeprecated());
 							method.put("tags", swaggerMethod.getTags());
-							if (swaggerMethod.getDocumentation() != null) {
+							if (swaggerMethod.getDocumentation() != null && includeDocumentation) {
 								method.put("externalDocs", new BeanInstance<SwaggerDocumentation>(swaggerMethod.getDocumentation()));
 							}
 							
@@ -139,7 +157,9 @@ public class SwaggerFormatter {
 								for (SwaggerResponse response : swaggerMethod.getResponses()) {
 									String code = response.getCode() == null ? "default" : response.getCode().toString();
 									Map<String, Object> responseContent = new LinkedHashMap<String, Object>();
-									responseContent.put("description", response.getDescription());
+									if (includeDocumentation) {
+										responseContent.put("description", response.getDescription());
+									}
 									if (response.getHeaders() != null) {
 										Map<String, Object> headerContent = new LinkedHashMap<String, Object>();
 										for (SwaggerParameter header : response.getHeaders()) {
@@ -249,7 +269,9 @@ public class SwaggerFormatter {
 			for (SwaggerSecurityDefinition securityDefinition : definition.getSecurityDefinitions()) {
 				Map<String, Object> securityContent = new LinkedHashMap<String, Object>();
 				securityContent.put("type", securityDefinition.getType().toString());
-				securityContent.put("description", securityDefinition.getDescription());
+				if (includeDocumentation) {
+					securityContent.put("description", securityDefinition.getDescription());
+				}
 				switch(securityDefinition.getType()) {
 					case apiKey:
 						securityContent.put("name", securityDefinition.getFieldName());
@@ -794,5 +816,13 @@ public class SwaggerFormatter {
 	public void setAllowCustomFormats(boolean allowCustomFormats) {
 		this.allowCustomFormats = allowCustomFormats;
 	}
-	
+
+	public boolean isIncludeDocumentation() {
+		return includeDocumentation;
+	}
+
+	public void setIncludeDocumentation(boolean includeDocumentation) {
+		this.includeDocumentation = includeDocumentation;
+	}
+
 }
