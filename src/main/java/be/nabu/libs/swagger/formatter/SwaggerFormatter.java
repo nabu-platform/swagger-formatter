@@ -415,11 +415,15 @@ public class SwaggerFormatter {
 	}
 	
 	public static String formatTypeAsJSON(Type type) {
+		return formatTypeAsJSON(type, true);
+	}
+	
+	public static String formatTypeAsJSON(Type type, boolean pretty) {
 		Map<String, Object> map = new SwaggerFormatter().formatDefinedType(null, type, true);
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		MapType content = MapContentWrapper.buildFromContent(map);
 		JSONBinding binding = new JSONBinding(content);
-		binding.setPrettyPrint(true);
+		binding.setPrettyPrint(pretty);
 		binding.setAllowRaw(true);
 		try {
 			binding.marshal(output, new MapContent(content, map));
