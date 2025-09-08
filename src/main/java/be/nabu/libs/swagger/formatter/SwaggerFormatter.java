@@ -58,6 +58,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.Marshallable;
+import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.binding.json.JSONBinding;
@@ -310,7 +311,7 @@ public class SwaggerFormatter {
 			map.put("securityDefinitions", security);
 		}
 		
-		MapType content = MapContentWrapper.buildFromContent(map);
+		ModifiableComplexType content = MapContentWrapper.buildFromContent(map);
 		JSONBinding binding = new JSONBinding(content);
 		binding.setPrettyPrint(true);
 		binding.setAllowRaw(true);
@@ -421,7 +422,7 @@ public class SwaggerFormatter {
 	public static String formatTypeAsJSON(Type type, boolean pretty) {
 		Map<String, Object> map = new SwaggerFormatter().formatDefinedType(null, type, true);
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
-		MapType content = MapContentWrapper.buildFromContent(map);
+		ModifiableComplexType content = MapContentWrapper.buildFromContent(map);
 		JSONBinding binding = new JSONBinding(content);
 		binding.setPrettyPrint(pretty);
 		binding.setAllowRaw(true);
